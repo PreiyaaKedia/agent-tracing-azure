@@ -1341,8 +1341,7 @@ azure_tracer = AzureAIOpenTelemetryTracer(
 
 | File | Framework | Approach | Unified Trace |
 |------|-----------|----------|---------------|
-| [`multi_agent_workflow_langchain.py`](./multi_agent_workflow_langchain.py) | LangChain (old) | Legacy pattern | ❌ |
-| [`multi_agent_workflow_langchain_agents.py`](./multi_agent_workflow_langchain_agents.py) | LangChain | Parent span | ✅ |
+| [`multi_agent_workflow_langchain.py`](./multi_agent_workflow_langchain.py) | LangChain | Parent span | ✅ |
 | [`multi_agent_workflow_langraph.py`](./multi_agent_workflow_langraph.py) | LangGraph | Native graph | ✅ |
 | [`multi_agent_orchestration_maf.py`](./multi_agent_orchestration_maf.py) | Agent Framework | Manual orchestration | ⚠️ |
 | [`sequential_workflow_maf.py`](./sequential_workflow_maf.py) | Agent Framework | SequentialBuilder | ✅ |
