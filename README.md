@@ -2,8 +2,6 @@
 
 > **Comprehensive guide for instrumenting single and multi-agent systems using LangChain, LangGraph, and Microsoft Agent Framework with OpenTelemetry semantic conventions**
 
-> **📸 Note**: This README includes image placeholders. To add screenshots, create an `images/` folder in this directory and add the referenced images.
-
 ## Table of Contents
 
 - [Overview](#overview)
