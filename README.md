@@ -1421,38 +1421,5 @@ This guide provides comprehensive instructions for instrumenting AI agents with 
 
 For questions or support, refer to the [Microsoft Q&A forum](https://learn.microsoft.com/answers/tags/451/azure-ai-foundry).
 
----
-
-## Setting Up Images
-
-This README includes placeholders for screenshots and visualizations. To add images:
-
-1. **Create images directory**:
-   ```bash
-   mkdir otel_tracing/images
-   ```
-
-2. **Add screenshots** with the following names:
-   - `foundry-traces-view.png` - Azure AI Foundry Observability > Traces view
-   - `app-insights-kql-query.png` - Application Insights KQL query example
-   - `grafana-agent-overview.gif` - Grafana Agent Overview Dashboard
-   - `grafana-workflow-overview.gif` - Grafana Workflow Overview Dashboard
-   - `aspire-dashboard.png` - Aspire Dashboard local development view
-   - `live-metrics.png` - Application Insights Live Metrics view
-
-3. **Recommended tools** for capturing screenshots:
-   - Windows: Snipping Tool (Win + Shift + S)
-   - macOS: Screenshot (Cmd + Shift + 4)
-   - Browser: Full page screenshot extensions
-
-4. **Image specifications**:
-   - Format: PNG for static images, GIF for animated dashboards
-   - Resolution: At least 1280x720 for clarity
-   - Annotations: Use arrows/highlights to point out key features
-
-5. **Alternative**: Download reference images from [Azure Managed Grafana Samples](https://github.com/Azure/azure-managed-grafana/tree/main/samples/assets)
-
----
-
 *Last updated: March 2026*  
 *Based on Microsoft Agent Framework, LangChain 1.0+, LangGraph 1.0+, and OpenTelemetry semantic conventions v1.28+*
