@@ -27,6 +27,8 @@
 
 This guide demonstrates how to instrument AI agents with **OpenTelemetry** for comprehensive observability in **Azure Application Insights**. Microsoft has contributed to enriching GenAI semantic conventions in OpenTelemetry, enabling unified multi-agent observability across different frameworks.
 
+> **Important**: This guide focuses on **currently implemented** observability features. Some advanced spans (like `agent_to_agent_interaction`, `agent_orchestration`) are proposed in the OpenTelemetry specification but not yet widely available in SDK versions. See the [OpenTelemetry GenAI Semantic Conventions](#opentelemetry-genai-semantic-conventions) section for details on what's currently implemented vs. proposed.
+
 ### What You'll Learn
 
 - How to configure tracing for single and multi-agent systems
@@ -46,22 +48,44 @@ This guide demonstrates how to instrument AI agents with **OpenTelemetry** for c
 
 ## OpenTelemetry GenAI Semantic Conventions
 
-Microsoft has proposed new spans and attributes to [OpenTelemetry Semantic Conventions for GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/) to capture the complexity of multi-agent systems:
+Microsoft has contributed to enriching [OpenTelemetry Semantic Conventions for GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/) to capture the complexity of multi-agent systems. The specification includes both **currently implemented** spans/attributes and **proposed future additions**.
 
-### New Additions
+### Currently Implemented Spans and Attributes
 
-| Addition | Name | Purpose |
-|----------|------|---------|
-| **New Span** | `execute_task` | Captures task planning and event propagation |
-| **New Child Spans** | `agent_to_agent_interaction` | Traces communication between agents |
-|  | `agent.state.management` | Manages context and memory |
-|  | `agent_planning` | Logs internal planning steps |
-|  | `agent_orchestration` | Captures agent-to-agent orchestration |
-| **New Attributes** | `tool_definitions` | Describes tool purpose/configuration |
-|  | `llm_spans` | Records model call spans |
-|  | `tool.call.arguments` | Logs tool invocation arguments |
-|  | `tool.call.results` | Records tool results |
-| **New Event** | `Evaluation` | Structured evaluation of agent performance |
+These are **actively emitted** by the current SDKs and visible in traces:
+
+| Type | Name | Purpose | Emitted By |
+|------|------|---------|------------|
+| **Span** | `invoke_agent` | Captures agent execution | Agent Framework, LangChain, LangGraph |
+| **Span** | `chat` / `LLM` | Records LLM calls | All frameworks |
+| **Span** | `execute_tool` | Logs tool invocations | All frameworks |
+| **Span** | `workflow.run` | Captures workflow orchestration | Agent Framework |
+| **Attribute** | `gen_ai.agent.name` | Agent identifier | `invoke_agent` spans |
+| **Attribute** | `gen_ai.system` | LLM provider | `chat` spans |
+| **Attribute** | `gen_ai.request.model` | Model requested | `chat` spans |
+| **Attribute** | `gen_ai.response.model` | Actual model version | `chat` spans |
+| **Attribute** | `gen_ai.usage.prompt_tokens` | Input tokens | `chat` spans |
+| **Attribute** | `gen_ai.usage.completion_tokens` | Output tokens | `chat` spans |
+| **Attribute** | `gen_ai.tool.name` | Tool identifier | `execute_tool` spans |
+| **Attribute** | `tool.call.id` | Tool invocation ID | `execute_tool` spans |
+| **Attribute** | `tool.call.arguments` | Tool arguments (JSON) | `execute_tool` spans |
+| **Attribute** | `tool.call.results` | Tool results | `execute_tool` spans |
+
+> **Recently Added to Spec** (September 2025): `gen_ai.tool_definitions` attribute was merged into the OpenTelemetry specification via [PR #2702](https://github.com/open-telemetry/semantic-conventions/pull/2702), which adds tool descriptions to `invoke_agent` and inference spans. SDK implementations are in progress.
+
+### Proposed Future Additions
+
+These have been **proposed** to OpenTelemetry but are **not yet** widely implemented in current SDK versions:
+
+| Addition | Name | Purpose | Status |
+|----------|------|---------|--------|
+| **Span** | `execute_task` | Captures task planning and event propagation | Proposed (not in spec) |
+| **Span** | `agent_to_agent_interaction` | Traces communication between agents | Proposed (not in spec) |
+| **Span** | `agent.state.management` | Manages context and memory | Proposed (not in spec) |
+| **Span** | `agent_planning` | Logs internal planning steps | Proposed (not in spec) |
+| **Span** | `agent_orchestration` | Captures agent-to-agent orchestration | Proposed (not in spec) |
+
+> **Note**: PR [#2702](https://github.com/open-telemetry/semantic-conventions/pull/2702) (merged Sept 2025) added tool-related attributes (`tool_definitions`, `tool.call.arguments`, `tool.call.result`) to the spec, and these are being implemented in SDKs. However, the new span types above are still proposals and not yet part of the specification.
 
 ### References
 
@@ -487,19 +511,34 @@ result = app.invoke({"messages": [...]}, config=config)
 
 ### Expected Trace Hierarchy
 
+Based on the current SDK implementations, you'll see these spans in your traces:
+
 ```
 invoke_agent <agent_name>
-├── chat (LLM call with gen_ai.* attributes)
+├── chat / LLM (model: gpt-4)
 │   ├── gen_ai.system = "openai"
 │   ├── gen_ai.request.model = "gpt-4"
 │   ├── gen_ai.response.model = "gpt-4-0613"
 │   ├── gen_ai.usage.prompt_tokens = 120
 │   └── gen_ai.usage.completion_tokens = 80
 ├── execute_tool <tool_name>
+│   ├── gen_ai.tool.name = "search_web"
 │   ├── tool.call.id = "call_abc123"
 │   ├── tool.call.arguments = "{\"query\": \"...\"}"
 │   └── tool.call.results = "..."
-└── chat (final response)
+└── chat / LLM (final response)
+```
+
+**For Agent Framework workflows**, you may also see:
+```
+sequential_workflow_orchestration (or workflow name)
+├── workflow.run
+│   ├── executor.process <agent_name>
+│   │   ├── invoke_agent <agent_name>
+│   │   │   ├── LLM (gpt-4)
+│   │   │   └── execute_tool <tool_name>
+│   │   └── message.send
+│   └── edge_group.process
 ```
 
 ### Configuration Checklist
@@ -586,19 +625,48 @@ result = await workflow.run(user_input="...")
 
 ### Expected Multi-Agent Trace Hierarchy
 
+Based on current SDK implementations, here's what you'll actually see in traces:
+
+#### LangGraph Multi-Agent Traces
 ```
-Multi-Agent Workflow (parent span)
+<graph_name> (parent span - automatically created)
 ├── invoke_agent Researcher
-│   ├── chat (planning)
+│   ├── LLM / chat (gpt-4)
 │   ├── execute_tool search_web
 │   ├── execute_tool gather_statistics
-│   └── chat (final research summary)
+│   └── LLM / chat (final response)
+├── <conditional_edge_logic>
 └── invoke_agent Writer
-    ├── chat (article generation)
+    ├── LLM / chat (gpt-4)
     ├── execute_tool format_article
     ├── execute_tool add_citations
-    └── chat (final formatted article)
+    └── LLM / chat (final output)
 ```
+
+#### Agent Framework SequentialBuilder Traces
+```
+sequential_workflow_orchestration (or custom workflow name)
+├── workflow.run
+│   ├── executor.process input-conversation
+│   ├── message.send
+│   ├── edge_group.process SingleEdgeGroup
+│   ├── executor.process researcher
+│   │   ├── invoke_agent researcher
+│   │   │   ├── LLM (gpt-4)
+│   │   │   ├── execute_tool search_web
+│   │   │   ├── execute_tool gather_statistics
+│   │   │   └── LLM (gpt-4)
+│   │   └── message.send
+│   ├── edge_group.process SingleEdgeGroup
+│   └── executor.process writer
+│       ├── invoke_agent writer
+│       │   ├── LLM (gpt-4)
+│       │   ├── execute_tool format_article
+│       │   └── LLM (gpt-4)
+│       └── message.send
+```
+
+> **Note**: The actual span names may vary slightly depending on framework version. Check your traces in Azure Monitor > Agents (Preview) to see the exact hierarchy for your implementation.
 
 ### Samples
 
@@ -1125,26 +1193,37 @@ Open [http://localhost:18888](http://localhost:18888/) in your browser to view:
 
 ### Understanding Trace Hierarchy
 
-Both Foundry and Aspire Dashboard visualize traces with the same hierarchy structure:
+Both Azure Monitor and Aspire Dashboard visualize traces with hierarchical span structures. Here's an example from an actual Agent Framework sequential workflow:
 
 ```
-Multi-Agent Workflow (parent span)
-├── invoke_agent Researcher
-│   ├── chat (model: gpt-4)
-│   │   ├── gen_ai.system: "openai"
-│   │   ├── gen_ai.request.model: "gpt-4"
-│   │   ├── gen_ai.usage.prompt_tokens: 120
-│   │   └── gen_ai.usage.completion_tokens: 80
-│   ├── execute_tool search_web
-│   │   ├── gen_ai.tool.name: "search_web"
-│   │   ├── tool.call.arguments: {"query": "quantum computing"}
-│   │   └── duration: 850ms
-│   └── chat (final response)
-└── invoke_agent Writer
-    ├── chat (model: gpt-4)
-    ├── execute_tool format_article
-    └── chat (final formatted output)
+sequential_workflow_orchestration (parent span)
+├── workflow.run (34 seconds total)
+│   ├── executor.process input-conversation
+│   ├── message.send
+│   ├── edge_group.process SingleEdgeGroup
+│   ├── executor.process researcher (9.6 seconds)
+│   │   ├── invoke_agent researcher (9.6 seconds)
+│   │   │   ├── LLM gpt-4.1 (2.1 seconds, 241 tokens)
+│   │   │   ├── execute_tool search_web (700ms)
+│   │   │   ├── execute_tool gather_statistics (820ms)
+│   │   │   └── LLM gpt-4.1 (6.7 seconds, 670 tokens)
+│   │   └── message.send
+│   ├── edge_group.process SingleEdgeGroup
+│   └── executor.process writer (24 seconds)
+│       ├── invoke_agent writer (24 seconds)
+│       │   ├── LLM gpt-4.1 (12 seconds, 1,307 tokens)
+│       │   ├── execute_tool format_article (210ms)
+│       │   └── LLM gpt-4.1 (12 seconds, 2,531 tokens)
+│       └── message.send
 ```
+
+**Key Span Types You'll See**:
+- **Workflow spans**: `workflow.run`, `sequential_workflow_orchestration`
+- **Executor spans**: `executor.process <agent_name>`, `executor.process input-conversation`
+- **Agent spans**: `invoke_agent <agent_name>`
+- **LLM spans**: `LLM` or `chat` with model name (e.g., `gpt-4.1`)
+- **Tool spans**: `execute_tool <tool_name>`
+- **Routing spans**: `edge_group.process`, `message.send`
 
 #### Key Attributes Reference
 
