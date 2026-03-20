@@ -1,0 +1,23 @@
+# Core Azure packages
+azure-identity
+azure-monitor-opentelemetry
+azure-ai-projects
+
+# LangChain and LangGraph packages
+langchain
+langchain-core
+langchain-openai
+langchain-azure-ai
+langgraph
+langchain-azure-ai[opentelemetry]
+
+# OpenTelemetry
+opentelemetry-api
+
+# Utilities
+python-dotenv
+pydantic
+
+# Agent Framework (Microsoft)
+agent-framework
+agent-framework-azure

@@ -1346,16 +1346,6 @@ azure_tracer = AzureAIOpenTelemetryTracer(
 | [`multi_agent_orchestration_maf.py`](./multi_agent_orchestration_maf.py) | Agent Framework | Manual orchestration | ⚠️ |
 | [`sequential_workflow_maf.py`](./sequential_workflow_maf.py) | Agent Framework | SequentialBuilder | ✅ |
 
-### Documentation
-
-| File | Content |
-|------|---------|
-| `README.md` | This comprehensive guide |
-| `README_LANGCHAIN.md` | (Deprecated) LangChain-specific guide |
-| `README_LANGGRAPH_COMPARISON.md` | (Deprecated) Framework comparison |
-| `README_MULTI_AGENT.md` | (Deprecated) Multi-agent patterns |
-| `README_SEQUENTIAL.md` | (Deprecated) Sequential workflows |
-
 ---
 
 ## Additional Resources
