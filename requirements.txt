@@ -13,6 +13,7 @@ langchain-azure-ai[opentelemetry]
 
 # OpenTelemetry
 opentelemetry-api
+opentelemetry-sdk
 
 # Utilities
 python-dotenv
